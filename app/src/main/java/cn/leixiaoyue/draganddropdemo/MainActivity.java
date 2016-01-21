@@ -11,8 +11,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.DragEvent;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.Toast;
 
 import java.lang.ref.WeakReference;
@@ -29,9 +29,10 @@ public class MainActivity extends Activity {
     public static final String[] MIMETYPES_TEXT_PLAIN = new String[] {
             ClipDescription.MIMETYPE_TEXT_PLAIN };
 
-    private LinearLayout mFactory;
-    private ScrollView mConsumer1,mConsumer2;
-    private MyDragEventListener mDragEventListener1,mDragEventListener2;
+    private LinearLayout mFactory, mConsumer2;
+    private FrameLayout mConsumer1;
+    private DragDetectSpecView mTopView, mBottomView;
+    private MyDragEventListener mDragEventListener1;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -46,20 +47,34 @@ public class MainActivity extends Activity {
         mFactory = (LinearLayout)findViewById(R.id.container_factory);
         mFactory.setTag(R.id.description,FACTORY_DESC);
 
-        mConsumer1 = (ScrollView)findViewById(R.id.container_consumer1);
+        mConsumer1 = (FrameLayout)findViewById(R.id.container_consumer1);
         mConsumer1.setTag(R.id.description, CONSUMER1_DESC);
         mConsumer1.setTag(R.id.backgroundcolor,Color.WHITE);
+        mConsumer1.setTag(R.id.transition_bg_id,R.drawable.border_transition);
 
-        mConsumer2 = (ScrollView)findViewById(R.id.container_consumer2);
+        mConsumer2 = (LinearLayout)findViewById(R.id.container_consumer2);
         mConsumer2.setTag(R.id.description, CONSUMER2_DESC);
         mConsumer2.setTag(R.id.backgroundcolor, Color.WHITE);
+        mConsumer2.setTag(R.id.transition_bg_id,R.drawable.border_transition);
+
+        mTopView = (DragDetectSpecView)findViewById(R.id.triangle_top);
+        mTopView.setTag(R.id.description, CONSUMER1_DESC);
+        mTopView.setTag(R.id.backgroundcolor, Color.WHITE);
+        mTopView.setTag(R.id.transition_bg_id,R.drawable.triangle_top_transition);
+
+        mBottomView = (DragDetectSpecView)findViewById(R.id.triangle_bottom);
+        mBottomView.setTag(R.id.description, CONSUMER1_DESC);
+        mBottomView.setTag(R.id.backgroundcolor, Color.WHITE);
+        mBottomView.setTag(R.id.transition_bg_id,R.drawable.triangle_bottom_transition);
     }
 
     private void initListener() {
         mDragEventListener1 = new MyDragEventListener();
-        mDragEventListener2 = new MyDragEventListener();
         mConsumer1.setOnDragListener(mDragEventListener1);
-        mConsumer2.setOnDragListener(mDragEventListener2);
+        mConsumer2.setOnDragListener(mDragEventListener1);
+
+        mTopView.addFriends(mBottomView);
+//        mBottomView.addFriends(mTopView);
     }
 
     private void produce() {
@@ -72,7 +87,6 @@ public class MainActivity extends Activity {
             int color = Color.rgb(random.nextInt(256), random.nextInt(256), random.nextInt(256));
             view.setTag(R.id.description, CONSUMER2_DESC);
             view.setBackground(new ColorDrawable(color));
-            Log.v(TAG, "[produce]" + color);
 //            String hexColor = String.format("#%06X", (0xFFFFFF & color));
 //            ClipData.Item item = new ClipData.Item(hexColor);
             ClipData.Item item = new ClipData.Item(color + "");
@@ -97,24 +111,17 @@ public class MainActivity extends Activity {
             final int action = event.getAction();
             switch (action) {
                 case DragEvent.ACTION_DRAG_STARTED: {
-                    Log.v(TAG,"[MyDragEventListener][onDrag]started");
                     return true;
                 }
                 case DragEvent.ACTION_DRAG_ENTERED: {
-                    Log.v(TAG,"[MyDragEventListener][onDrag]entered");
                     mOriginBackground = new WeakReference<>(v.getBackground());
-                    TransitionDrawable drawable = (TransitionDrawable)getDrawable(R.drawable.border_transition);
-                    v.setBackground(drawable);
-                    drawable.startTransition(1000);
-                    v.invalidate();
+                    invadeWarning(v);
                     return true;
                 }
                 case DragEvent.ACTION_DRAG_LOCATION:{
-                    Log.v(TAG,"[MyDragEventListener][onDrag]location");
                     return true;
                 }
                 case DragEvent.ACTION_DROP:{
-                    Log.v(TAG,"[MyDragEventListener][onDrag]drop");
                     if(v.getTag(R.id.description).toString()
                             .equals(event.getClipDescription().getLabel())){
                         int color1 = (int)v.getTag(R.id.backgroundcolor);
@@ -130,11 +137,19 @@ public class MainActivity extends Activity {
                     return true;
                 }
                 case DragEvent.ACTION_DRAG_EXITED: {
-                    Log.v(TAG,"[MyDragEventListener][onDrag]exited");
+                    invadeWarning(v);
                     return true;
                 }
             }
             return false;
+        }
+
+        private void invadeWarning(View v){
+            int drawableId = Integer.valueOf(v.getTag(R.id.transition_bg_id).toString());
+            TransitionDrawable drawable = (TransitionDrawable)getDrawable(drawableId);
+            v.setBackground(drawable);
+            drawable.startTransition(100);
+            v.invalidate();
         }
     }
 }
